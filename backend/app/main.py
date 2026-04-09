@@ -9,6 +9,7 @@ from copilotkit.integrations.fastapi import add_fastapi_endpoint
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from langgraph.graph import MessagesState, StateGraph
 
 from .agent import create_agent
 from .config import settings
@@ -29,8 +30,30 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# CopilotKit SDK — agents are injected per-request via middleware
-copilotkit_sdk = CopilotKitRemoteEndpoint(agents=[])
+
+def _create_placeholder_agent():
+    """Create a minimal LangGraph agent so the /info endpoint can register the agent name.
+
+    This placeholder is swapped for the real agent on each chat request.
+    """
+    graph = StateGraph(MessagesState)
+    graph.add_node("noop", lambda state: state)
+    graph.set_entry_point("noop")
+    graph.set_finish_point("noop")
+    return graph.compile()
+
+
+# Register a placeholder so CopilotKit /info returns "api_agent".
+# The real agent (with the user's API key) is injected per-request via middleware.
+copilotkit_sdk = CopilotKitRemoteEndpoint(
+    agents=[
+        LangGraphAgent(
+            name="api_agent",
+            description="An agent that can interact with configured REST APIs to help users accomplish tasks.",
+            agent=_create_placeholder_agent(),
+        ),
+    ],
+)
 add_fastapi_endpoint(app, copilotkit_sdk, "/copilotkit")
 
 
