@@ -12,7 +12,7 @@ interface Props {
 export default function ChatAgent({ config, onReset }: Props) {
   const runtimeUrl =
     process.env.NEXT_PUBLIC_COPILOTKIT_RUNTIME_URL ||
-    "http://localhost:8000/copilotkit";
+    "https://backend-production-815b.up.railway.app/copilotkit";
 
   return (
     <CopilotKit
