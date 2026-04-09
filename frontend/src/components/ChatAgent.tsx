@@ -10,9 +10,8 @@ interface Props {
 }
 
 export default function ChatAgent({ config, onReset }: Props) {
-  const runtimeUrl =
-    process.env.NEXT_PUBLIC_COPILOTKIT_RUNTIME_URL ||
-    "https://backend-production-815b.up.railway.app/copilotkit";
+  // Use the local API route proxy — avoids CORS and build-time env var issues
+  const runtimeUrl = "/api/copilotkit";
 
   return (
     <CopilotKit
