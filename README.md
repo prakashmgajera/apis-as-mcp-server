@@ -222,6 +222,47 @@ apis:
 | `api_key` | `token_env_var`, `header_name` | API key in custom header |
 | `basic` | `token_env_var` | HTTP Basic auth |
 
+## Deploy to Railway
+
+Railway lets you deploy both services directly from your GitHub repo.
+
+### Step 1: Create a Railway Project
+
+1. Go to [railway.app](https://railway.app) and sign in with GitHub
+2. Click **New Project** → **Empty Project**
+
+### Step 2: Deploy the Backend
+
+1. In your project, click **New** → **GitHub Repo** → select this repo
+2. Railway will detect the repo — click **Add Service**
+3. Go to the service **Settings**:
+   - Set **Root Directory** to `backend`
+   - Set **Start Command** to `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+4. Go to **Variables** and add:
+   ```
+   MODEL_PROVIDER=openai          # or anthropic, google
+   MODEL_NAME=gpt-4o              # or claude-sonnet-4-20250514, gemini-2.0-flash
+   OPENAI_API_KEY=sk-...          # key for your chosen provider
+   ```
+5. Go to **Settings** → **Networking** → click **Generate Domain** (note the URL)
+
+### Step 3: Deploy the Frontend
+
+1. In the same project, click **New** → **GitHub Repo** → select this repo again
+2. Go to the service **Settings**:
+   - Set **Root Directory** to `frontend`
+3. Go to **Variables** and add:
+   ```
+   NEXT_PUBLIC_COPILOTKIT_RUNTIME_URL=https://<your-backend>.up.railway.app/copilotkit
+   ```
+4. Go to **Settings** → **Networking** → click **Generate Domain**
+
+### Step 4: Open and Chat
+
+Visit your frontend domain — the chat interface is ready to use.
+
+> **Tip:** Both services auto-redeploy when you push to the connected branch. Add new YAML API configs, push, and they're live.
+
 ## Tech Stack
 
 - **Backend:** Python, FastAPI, LangGraph, LangChain, CopilotKit Python SDK

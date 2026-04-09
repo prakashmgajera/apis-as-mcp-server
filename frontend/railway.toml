@@ -1,0 +1,10 @@
+[build]
+builder = "nixpacks"
+
+[build.nixpacks]
+providers = ["node"]
+
+[deploy]
+startCommand = "npm start -- --port ${PORT:-3000}"
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3
