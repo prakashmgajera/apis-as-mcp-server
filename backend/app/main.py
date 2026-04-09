@@ -32,7 +32,7 @@ app.add_middleware(
 
 
 def _create_placeholder_agent():
-    """Create a minimal LangGraph agent so the /info endpoint can register the agent name.
+    """Create a minimal LangGraph agent so CopilotKit /info can discover the agent name.
 
     This placeholder is swapped for the real agent on each chat request.
     """
@@ -64,26 +64,32 @@ async def inject_model_from_headers(request: Request, call_next):
     The API key is used only for this request and never persisted.
     """
     if "/copilotkit" in request.url.path and request.method == "POST":
-        provider = request.headers.get("x-model-provider", settings.model_provider.value)
-        model_name = request.headers.get("x-model-name", settings.model_name)
+        provider = request.headers.get("x-model-provider")
+        model_name = request.headers.get("x-model-name")
         api_key = request.headers.get("x-api-key", "")
 
-        # Fall back to env-var keys when no header key is provided
+        # Skip agent injection for info/discovery requests (no API key yet)
         if not api_key:
+            # Fall back to env-var keys
             key_map = {
                 "openai": settings.openai_api_key,
                 "anthropic": settings.anthropic_api_key,
                 "google": settings.google_api_key,
             }
+            provider = provider or settings.model_provider.value
             api_key = key_map.get(provider, "")
 
         if not api_key:
-            return JSONResponse(
-                status_code=400,
-                content={"error": "API key is required. Please configure your model provider."},
-            )
+            # No key at all — let the placeholder agent handle /info requests,
+            # but block actual chat requests gracefully.
+            logger.debug(f"No API key for {request.url.path}, using placeholder agent")
+            return await call_next(request)
+
+        provider = provider or settings.model_provider.value
+        model_name = model_name or settings.model_name
 
         try:
+            logger.debug(f"Creating agent: provider={provider}, model={model_name}")
             agent = create_agent(provider=provider, model_name=model_name, api_key=api_key)
             copilotkit_sdk.agents = [
                 LangGraphAgent(

@@ -2,11 +2,25 @@
 
 from __future__ import annotations
 
+import logging
+
 from langchain_core.language_models.chat_models import BaseChatModel
 from langgraph.prebuilt import create_react_agent
 
 from .config import settings
 from .tools.registry import create_tools_from_configs
+
+logger = logging.getLogger(__name__)
+
+SYSTEM_MESSAGE = (
+    "You are a helpful assistant that can interact with various REST APIs on behalf of the user. "
+    "You have access to the following API tools. Use them to fulfill user requests.\n\n"
+    "Guidelines:\n"
+    "- Always confirm what the user wants before making destructive API calls (DELETE, PUT).\n"
+    "- Present API responses in a clear, human-readable format.\n"
+    "- If an API call fails, explain the error and suggest next steps.\n"
+    "- When multiple API calls are needed, plan the sequence and explain your approach.\n"
+)
 
 
 def _create_model(provider: str, model_name: str, api_key: str) -> BaseChatModel:
@@ -43,24 +57,17 @@ def create_agent(
     provider = provider or settings.model_provider.value
     model_name = model_name or settings.model_name
 
-    model = _create_model(provider, model_name, api_key)
+    logger.info(f"Creating agent with provider={provider}, model={model_name}")
 
+    model = _create_model(provider, model_name, api_key)
     tools = create_tools_from_configs(settings.api_config_dir)
 
-    system_message = (
-        "You are a helpful assistant that can interact with various REST APIs on behalf of the user. "
-        "You have access to the following API tools. Use them to fulfill user requests.\n\n"
-        "Guidelines:\n"
-        "- Always confirm what the user wants before making destructive API calls (DELETE, PUT).\n"
-        "- Present API responses in a clear, human-readable format.\n"
-        "- If an API call fails, explain the error and suggest next steps.\n"
-        "- When multiple API calls are needed, plan the sequence and explain your approach.\n"
-    )
-
+    # Use state_modifier for broad LangGraph >=0.2 compatibility.
+    # (Renamed to 'prompt' in later versions, but state_modifier still works.)
     agent = create_react_agent(
         model=model,
         tools=tools,
-        prompt=system_message,
+        state_modifier=SYSTEM_MESSAGE,
     )
 
     return agent

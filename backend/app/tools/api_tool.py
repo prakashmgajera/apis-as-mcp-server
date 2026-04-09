@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 from typing import Any
@@ -16,13 +17,19 @@ from ..models.api_config import (
     ParameterLocation,
 )
 
+logger = logging.getLogger(__name__)
+
 
 def _resolve_env_vars(value: str) -> str:
     """Replace ${ENV_VAR} placeholders with actual environment variable values."""
 
     def replacer(match: re.Match) -> str:
         var_name = match.group(1)
-        return os.environ.get(var_name, match.group(0))
+        resolved = os.environ.get(var_name)
+        if resolved is None:
+            logger.warning(f"Environment variable ${{{var_name}}} is not set")
+            return match.group(0)
+        return resolved
 
     return re.sub(r"\$\{(\w+)}", replacer, value)
 
@@ -38,6 +45,8 @@ def _build_auth_headers(config: ApiEndpointConfig) -> dict[str, str]:
     token = ""
     if auth.token_env_var:
         token = os.environ.get(auth.token_env_var, "")
+        if not token:
+            logger.warning(f"Auth token env var {auth.token_env_var} is not set")
 
     if auth.type == AuthType.BEARER:
         headers["Authorization"] = f"{auth.prefix} {token}"
@@ -89,27 +98,44 @@ async def execute_api_call(config: ApiEndpointConfig, **kwargs: Any) -> str:
 
     url = f"{base_url.rstrip('/')}/{path.lstrip('/')}"
 
-    async with httpx.AsyncClient(timeout=config.timeout) as client:
-        request_kwargs: dict[str, Any] = {
-            "method": config.method.value,
-            "url": url,
-            "headers": headers,
-            "params": query_params if query_params else None,
-        }
+    try:
+        async with httpx.AsyncClient(timeout=config.timeout) as client:
+            request_kwargs: dict[str, Any] = {
+                "method": config.method.value,
+                "url": url,
+                "headers": headers,
+                "params": query_params if query_params else None,
+            }
 
-        if config.method in (HttpMethod.POST, HttpMethod.PUT, HttpMethod.PATCH) and body_params:
-            request_kwargs["json"] = body_params
+            if config.method in (HttpMethod.POST, HttpMethod.PUT, HttpMethod.PATCH) and body_params:
+                request_kwargs["json"] = body_params
 
-        response = await client.request(**request_kwargs)
+            response = await client.request(**request_kwargs)
+    except httpx.TimeoutException:
+        return f"Error: Request to {url} timed out after {config.timeout}s"
+    except httpx.ConnectError:
+        return f"Error: Could not connect to {url}"
+    except httpx.RequestError as e:
+        return f"Error: Request to {url} failed — {e}"
 
     # Format the response
+    status = response.status_code
     try:
         data = response.json()
-        if config.response_template:
+    except (json.JSONDecodeError, ValueError):
+        return f"Status: {status}\n\n{response.text[:2000]}"
+
+    if status >= 400:
+        return f"Error (HTTP {status}):\n{json.dumps(data, indent=2)}"
+
+    if config.response_template:
+        try:
             from jinja2 import Template
 
             template = Template(config.response_template)
-            return template.render(response=data, status_code=response.status_code)
-        return json.dumps(data, indent=2)
-    except (json.JSONDecodeError, ValueError):
-        return f"Status: {response.status_code}\n\n{response.text[:2000]}"
+            return template.render(response=data, status_code=status)
+        except Exception as e:
+            logger.warning(f"Jinja2 template rendering failed: {e}")
+            return json.dumps(data, indent=2)
+
+    return json.dumps(data, indent=2)

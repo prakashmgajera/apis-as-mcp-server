@@ -1,11 +1,18 @@
 /**
- * Catch-all proxy route for CopilotKit sub-paths (e.g. /info, /action).
+ * Catch-all proxy: forwards /api/copilotkit/<path> → BACKEND/copilotkit/<path>
  *
- * Forwards /api/copilotkit/<anything> → BACKEND/copilotkit/<anything>
+ * Handles CopilotKit sub-endpoints like /info, /action, etc.
  */
 
 const BACKEND_URL =
   process.env.COPILOTKIT_BACKEND_URL || "http://localhost:8000";
+
+const HOP_BY_HOP = new Set([
+  "host",
+  "content-length",
+  "connection",
+  "transfer-encoding",
+]);
 
 async function proxyRequest(
   request: Request,
@@ -17,27 +24,40 @@ async function proxyRequest(
 
   const headers = new Headers();
   request.headers.forEach((value, key) => {
-    if (!["host", "content-length"].includes(key.toLowerCase())) {
+    if (!HOP_BY_HOP.has(key.toLowerCase())) {
       headers.set(key, value);
     }
   });
 
   const body = request.method !== "GET" ? await request.text() : undefined;
 
-  const response = await fetch(backendTarget, {
-    method: request.method,
-    headers,
-    body,
-  });
+  try {
+    const response = await fetch(backendTarget, {
+      method: request.method,
+      headers,
+      body,
+    });
 
-  return new Response(response.body, {
-    status: response.status,
-    headers: {
-      "Content-Type":
-        response.headers.get("Content-Type") || "application/json",
-      "Cache-Control": "no-cache",
-    },
-  });
+    // Forward all response headers from the backend
+    const responseHeaders = new Headers();
+    response.headers.forEach((value, key) => {
+      if (!HOP_BY_HOP.has(key.toLowerCase())) {
+        responseHeaders.set(key, value);
+      }
+    });
+    responseHeaders.set("Cache-Control", "no-cache");
+
+    return new Response(response.body, {
+      status: response.status,
+      headers: responseHeaders,
+    });
+  } catch (error) {
+    console.error(`Proxy error for /copilotkit/${subPath}:`, error);
+    return new Response(
+      JSON.stringify({ error: "Failed to reach backend server" }),
+      { status: 502, headers: { "Content-Type": "application/json" } }
+    );
+  }
 }
 
 export const GET = proxyRequest;
