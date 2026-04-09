@@ -1,8 +1,6 @@
 [build]
 builder = "nixpacks"
-
-[build.nixpacks]
-providers = ["node"]
+buildCommand = "npm install && npm run build"
 
 [deploy]
 startCommand = "npm start -- --port ${PORT:-3000}"
