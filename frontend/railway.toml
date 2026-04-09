@@ -1,4 +1,4 @@
 [deploy]
-startCommand = "npx next start -p $PORT"
+startCommand = "sh -c 'next start -p $PORT'"
 restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 3
