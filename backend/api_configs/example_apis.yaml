@@ -1,0 +1,103 @@
+version: "1.0"
+
+groups:
+  - name: JSONPlaceholder
+    description: >
+      Example APIs using JSONPlaceholder (https://jsonplaceholder.typicode.com),
+      a free fake REST API for testing and prototyping.
+
+    apis:
+      - name: list_posts
+        description: "List all blog posts, optionally filtered by user ID"
+        base_url: "https://jsonplaceholder.typicode.com"
+        path: "/posts"
+        method: GET
+        parameters:
+          - name: userId
+            description: "Filter posts by user ID"
+            type: integer
+            required: false
+            location: query
+
+      - name: get_post
+        description: "Get a specific blog post by its ID"
+        base_url: "https://jsonplaceholder.typicode.com"
+        path: "/posts/{postId}"
+        method: GET
+        parameters:
+          - name: postId
+            description: "The ID of the post to retrieve"
+            type: integer
+            required: true
+            location: path
+
+      - name: create_post
+        description: "Create a new blog post"
+        base_url: "https://jsonplaceholder.typicode.com"
+        path: "/posts"
+        method: POST
+        headers:
+          Content-Type: "application/json"
+        parameters:
+          - name: title
+            description: "Title of the blog post"
+            type: string
+            required: true
+            location: body
+          - name: body
+            description: "Content body of the blog post"
+            type: string
+            required: true
+            location: body
+          - name: userId
+            description: "ID of the user creating the post"
+            type: integer
+            required: true
+            location: body
+
+      - name: list_users
+        description: "List all users"
+        base_url: "https://jsonplaceholder.typicode.com"
+        path: "/users"
+        method: GET
+
+      - name: get_user
+        description: "Get a specific user by their ID"
+        base_url: "https://jsonplaceholder.typicode.com"
+        path: "/users/{userId}"
+        method: GET
+        parameters:
+          - name: userId
+            description: "The ID of the user to retrieve"
+            type: integer
+            required: true
+            location: path
+
+      - name: list_comments
+        description: "List comments, optionally filtered by post ID"
+        base_url: "https://jsonplaceholder.typicode.com"
+        path: "/comments"
+        method: GET
+        parameters:
+          - name: postId
+            description: "Filter comments by post ID"
+            type: integer
+            required: false
+            location: query
+
+      - name: list_todos
+        description: "List todos, optionally filtered by user ID or completion status"
+        base_url: "https://jsonplaceholder.typicode.com"
+        path: "/todos"
+        method: GET
+        parameters:
+          - name: userId
+            description: "Filter todos by user ID"
+            type: integer
+            required: false
+            location: query
+          - name: completed
+            description: "Filter by completion status"
+            type: boolean
+            required: false
+            location: query

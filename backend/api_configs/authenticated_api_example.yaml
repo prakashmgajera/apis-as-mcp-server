@@ -1,0 +1,94 @@
+version: "1.0"
+
+# This is an example showing how to configure authenticated APIs.
+# Copy this file and modify it for your own APIs.
+# Environment variables referenced as ${VAR_NAME} are resolved at runtime.
+
+groups:
+  - name: GitHub API
+    description: >
+      Example configuration for the GitHub REST API with Bearer token auth.
+      Set the GITHUB_TOKEN environment variable to use these tools.
+
+    apis:
+      - name: github_get_user
+        description: "Get a GitHub user's public profile information"
+        base_url: "https://api.github.com"
+        path: "/users/{username}"
+        method: GET
+        headers:
+          Accept: "application/vnd.github.v3+json"
+          User-Agent: "apis-as-mcp-server"
+        auth:
+          type: bearer
+          token_env_var: GITHUB_TOKEN
+        parameters:
+          - name: username
+            description: "GitHub username to look up"
+            type: string
+            required: true
+            location: path
+
+      - name: github_list_repos
+        description: "List public repositories for a GitHub user"
+        base_url: "https://api.github.com"
+        path: "/users/{username}/repos"
+        method: GET
+        headers:
+          Accept: "application/vnd.github.v3+json"
+          User-Agent: "apis-as-mcp-server"
+        auth:
+          type: bearer
+          token_env_var: GITHUB_TOKEN
+        parameters:
+          - name: username
+            description: "GitHub username"
+            type: string
+            required: true
+            location: path
+          - name: sort
+            description: "Sort by: created, updated, pushed, full_name"
+            type: string
+            required: false
+            location: query
+            default: "updated"
+          - name: per_page
+            description: "Results per page (max 100)"
+            type: integer
+            required: false
+            location: query
+            default: 10
+
+      - name: github_search_repos
+        description: "Search for GitHub repositories by keyword"
+        base_url: "https://api.github.com"
+        path: "/search/repositories"
+        method: GET
+        headers:
+          Accept: "application/vnd.github.v3+json"
+          User-Agent: "apis-as-mcp-server"
+        auth:
+          type: bearer
+          token_env_var: GITHUB_TOKEN
+        parameters:
+          - name: q
+            description: "Search query (e.g., 'machine learning language:python')"
+            type: string
+            required: true
+            location: query
+          - name: sort
+            description: "Sort by: stars, forks, help-wanted-issues, updated"
+            type: string
+            required: false
+            location: query
+          - name: per_page
+            description: "Results per page (max 100)"
+            type: integer
+            required: false
+            location: query
+            default: 10
+        response_template: |
+          Found {{ response.total_count }} repositories:
+          {% for repo in response.items[:10] %}
+          - **{{ repo.full_name }}** ({{ repo.stargazers_count }} stars): {{ repo.description or 'No description' }}
+          {% endfor %}
