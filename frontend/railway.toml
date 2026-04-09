@@ -1,4 +1,4 @@
 [deploy]
-startCommand = "sh -c 'next start -p $PORT'"
+startCommand = "npm start"
 restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 3
