@@ -1,4 +1,4 @@
 [deploy]
-startCommand = "npm start -- --port ${PORT:-3000}"
+startCommand = "npx next start -p $PORT"
 restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 3
