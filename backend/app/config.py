@@ -3,8 +3,15 @@
 from __future__ import annotations
 
 import os
+from enum import Enum
 
 from pydantic_settings import BaseSettings
+
+
+class ModelProvider(str, Enum):
+    OPENAI = "openai"
+    ANTHROPIC = "anthropic"
+    GOOGLE = "google"
 
 
 class Settings(BaseSettings):
@@ -13,9 +20,14 @@ class Settings(BaseSettings):
     app_name: str = "APIs as MCP Server"
     debug: bool = False
 
-    # LLM
-    openai_api_key: str = ""
+    # LLM Provider
+    model_provider: ModelProvider = ModelProvider.OPENAI
     model_name: str = "gpt-4o"
+
+    # Provider API Keys
+    openai_api_key: str = ""
+    anthropic_api_key: str = ""
+    google_api_key: str = ""
 
     # Server
     host: str = "0.0.0.0"

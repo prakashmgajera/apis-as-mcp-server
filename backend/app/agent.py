@@ -2,11 +2,31 @@
 
 from __future__ import annotations
 
-from langchain_openai import ChatOpenAI
+from langchain_core.language_models.chat_models import BaseChatModel
 from langgraph.prebuilt import create_react_agent
 
-from .config import settings
+from .config import ModelProvider, settings
 from .tools.registry import create_tools_from_configs
+
+
+def _create_model() -> BaseChatModel:
+    """Create the chat model based on the configured provider."""
+    if settings.model_provider == ModelProvider.OPENAI:
+        from langchain_openai import ChatOpenAI
+
+        return ChatOpenAI(model=settings.model_name, api_key=settings.openai_api_key)
+
+    if settings.model_provider == ModelProvider.ANTHROPIC:
+        from langchain_anthropic import ChatAnthropic
+
+        return ChatAnthropic(model=settings.model_name, api_key=settings.anthropic_api_key)
+
+    if settings.model_provider == ModelProvider.GOOGLE:
+        from langchain_google_genai import ChatGoogleGenerativeAI
+
+        return ChatGoogleGenerativeAI(model=settings.model_name, google_api_key=settings.google_api_key)
+
+    raise ValueError(f"Unsupported model provider: {settings.model_provider}")
 
 
 def create_agent():
@@ -15,7 +35,7 @@ def create_agent():
     The agent is equipped with tools dynamically generated from the YAML
     API configurations found in the configured api_config_dir.
     """
-    model = ChatOpenAI(model=settings.model_name, api_key=settings.openai_api_key)
+    model = _create_model()
 
     tools = create_tools_from_configs(settings.api_config_dir)
 
