@@ -9,7 +9,6 @@ from copilotkit.integrations.fastapi import add_fastapi_endpoint
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .agent import create_agent
 from .config import settings
 
 logging.basicConfig(level=logging.DEBUG if settings.debug else logging.INFO)
@@ -28,21 +27,29 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Create the LangGraph agent with dynamically loaded API tools
-agent = create_agent()
 
-# Set up CopilotKit remote endpoint with the agent
-copilotkit = CopilotKitRemoteEndpoint(
-    agents=[
-        LangGraphAgent(
-            name="api_agent",
-            description="An agent that can interact with configured REST APIs to help users accomplish tasks.",
-            agent=agent,
-        ),
-    ],
-)
+@app.on_event("startup")
+async def startup():
+    """Initialize the agent and CopilotKit endpoint on startup."""
+    from .agent import create_agent
 
-add_fastapi_endpoint(app, copilotkit, "/copilotkit")
+    try:
+        agent = create_agent()
+
+        copilotkit = CopilotKitRemoteEndpoint(
+            agents=[
+                LangGraphAgent(
+                    name="api_agent",
+                    description="An agent that can interact with configured REST APIs to help users accomplish tasks.",
+                    agent=agent,
+                ),
+            ],
+        )
+
+        add_fastapi_endpoint(app, copilotkit, "/copilotkit")
+        logger.info("CopilotKit agent initialized successfully")
+    except Exception:
+        logger.exception("Failed to initialize agent — /copilotkit will not be available")
 
 
 @app.get("/health")
