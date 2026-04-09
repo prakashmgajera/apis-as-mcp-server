@@ -5,37 +5,45 @@ from __future__ import annotations
 from langchain_core.language_models.chat_models import BaseChatModel
 from langgraph.prebuilt import create_react_agent
 
-from .config import ModelProvider, settings
+from .config import settings
 from .tools.registry import create_tools_from_configs
 
 
-def _create_model() -> BaseChatModel:
-    """Create the chat model based on the configured provider."""
-    if settings.model_provider == ModelProvider.OPENAI:
+def _create_model(provider: str, model_name: str, api_key: str) -> BaseChatModel:
+    """Create the chat model for the given provider."""
+    if provider == "openai":
         from langchain_openai import ChatOpenAI
 
-        return ChatOpenAI(model=settings.model_name, api_key=settings.openai_api_key)
+        return ChatOpenAI(model=model_name, api_key=api_key)
 
-    if settings.model_provider == ModelProvider.ANTHROPIC:
+    if provider == "anthropic":
         from langchain_anthropic import ChatAnthropic
 
-        return ChatAnthropic(model=settings.model_name, api_key=settings.anthropic_api_key)
+        return ChatAnthropic(model=model_name, api_key=api_key)
 
-    if settings.model_provider == ModelProvider.GOOGLE:
+    if provider == "google":
         from langchain_google_genai import ChatGoogleGenerativeAI
 
-        return ChatGoogleGenerativeAI(model=settings.model_name, google_api_key=settings.google_api_key)
+        return ChatGoogleGenerativeAI(model=model_name, google_api_key=api_key)
 
-    raise ValueError(f"Unsupported model provider: {settings.model_provider}")
+    raise ValueError(f"Unsupported model provider: {provider}")
 
 
-def create_agent():
+def create_agent(
+    provider: str = "",
+    model_name: str = "",
+    api_key: str = "",
+):
     """Create a LangGraph ReAct agent with all registered API tools.
 
-    The agent is equipped with tools dynamically generated from the YAML
-    API configurations found in the configured api_config_dir.
+    When called without arguments, falls back to settings from environment.
+    When called with explicit provider/model_name/api_key, uses those instead
+    (for per-request session-based configuration).
     """
-    model = _create_model()
+    provider = provider or settings.model_provider.value
+    model_name = model_name or settings.model_name
+
+    model = _create_model(provider, model_name, api_key)
 
     tools = create_tools_from_configs(settings.api_config_dir)
 

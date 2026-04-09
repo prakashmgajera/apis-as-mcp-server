@@ -1,40 +1,15 @@
 "use client";
 
-import { CopilotChat } from "@copilotkit/react-ui";
+import { useState } from "react";
+import ConfigPanel, { type ModelConfig } from "@/components/ConfigPanel";
+import ChatAgent from "@/components/ChatAgent";
 
 export default function Home() {
-  return (
-    <div className="flex flex-col h-screen">
-      {/* Header */}
-      <header className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-white">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
-            <span className="text-white font-bold text-sm">API</span>
-          </div>
-          <div>
-            <h1 className="text-lg font-semibold text-gray-900">
-              APIs as MCP Server
-            </h1>
-            <p className="text-xs text-gray-500">
-              Chat with your REST APIs
-            </p>
-          </div>
-        </div>
-      </header>
+  const [config, setConfig] = useState<ModelConfig | null>(null);
 
-      {/* Chat Area */}
-      <main className="flex-1 overflow-hidden">
-        <CopilotChat
-          className="h-full"
-          instructions="You are a helpful assistant that interacts with REST APIs on behalf of the user. Present information clearly and ask for confirmation before making changes."
-          labels={{
-            title: "API Assistant",
-            initial:
-              "Hi! I can help you interact with your configured REST APIs. Try asking me to list posts, get user details, create content, or any other operation your APIs support.",
-            placeholder: "Ask me to call an API...",
-          }}
-        />
-      </main>
-    </div>
-  );
+  if (!config) {
+    return <ConfigPanel onSubmit={setConfig} />;
+  }
+
+  return <ChatAgent config={config} onReset={() => setConfig(null)} />;
 }
