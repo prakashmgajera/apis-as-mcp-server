@@ -1,0 +1,29 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "file=\"$CLAUDE_FILE_PATH\"; case \"$file\" in *.py) cd backend && ruff check --fix \"$file\" && ruff format \"$file\" ;; *.ts|*.tsx) cd frontend && npx next lint --file \"$file\" --fix 2>/dev/null ;; esac",
+            "timeout": 30000
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Bash(pytest *)",
+      "Bash(ruff *)",
+      "Bash(npm run lint)",
+      "Bash(npm run build)",
+      "Bash(npx tsc --noEmit)",
+      "Bash(cd backend && pytest *)",
+      "Bash(cd frontend && npm run lint)",
+      "Bash(cd frontend && npm run build)",
+      "Bash(cd frontend && npx tsc --noEmit)"
+    ]
+  }
+}

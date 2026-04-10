@@ -42,12 +42,8 @@ sse_transport = SseServerTransport("/messages/")
 
 async def handle_sse(request: Request):
     """Handle SSE connection from MCP clients."""
-    async with sse_transport.connect_sse(
-        request.scope, request.receive, request._send
-    ) as streams:
-        await mcp_server.run(
-            streams[0], streams[1], mcp_server.create_initialization_options()
-        )
+    async with sse_transport.connect_sse(request.scope, request.receive, request._send) as streams:
+        await mcp_server.run(streams[0], streams[1], mcp_server.create_initialization_options())
 
 
 async def handle_reload(request: Request):
@@ -58,11 +54,13 @@ async def handle_reload(request: Request):
 
 async def handle_health(request: Request):
     """Health check endpoint."""
-    return JSONResponse({
-        "status": "healthy",
-        "tools": len(registry.get_tool_names()),
-        "tool_names": registry.get_tool_names(),
-    })
+    return JSONResponse(
+        {
+            "status": "healthy",
+            "tools": len(registry.get_tool_names()),
+            "tool_names": registry.get_tool_names(),
+        }
+    )
 
 
 # Build the Starlette app

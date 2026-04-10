@@ -24,9 +24,7 @@ async def list_tools():
     try:
         async with httpx.AsyncClient(timeout=10) as client:
             # Use the MCP server's health endpoint which includes tool names
-            resp = await client.get(
-                settings.mcp_server_url.replace("/sse", "/health")
-            )
+            resp = await client.get(settings.mcp_server_url.replace("/sse", "/health"))
             resp.raise_for_status()
             health_data = resp.json()
     except Exception as e:
@@ -50,14 +48,16 @@ async def list_tools():
 
         tools = []
         for tool in mcp_tools:
-            tools.append({
-                "name": tool.name,
-                "description": tool.description,
-            })
+            tools.append(
+                {
+                    "name": tool.name,
+                    "description": tool.description,
+                }
+            )
 
         return {"tools": tools, "count": len(tools)}
 
-    except Exception as e:
+    except Exception:
         logger.exception("Failed to fetch tool details from MCP server")
         # Fall back to just tool names from health endpoint
         tool_names = health_data.get("tool_names", [])

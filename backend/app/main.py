@@ -4,15 +4,14 @@ from __future__ import annotations
 
 import logging
 
-from copilotkit import CopilotKitRemoteEndpoint, LangGraphAGUIAgent
-from copilotkit.integrations.fastapi import add_fastapi_endpoint
-
 # ---------------------------------------------------------------------------
 # Workaround 1: CopilotKit 0.1.86 LangGraphAGUIAgent.dict_repr() calls
 # super().dict_repr() on ag_ui_langgraph.LangGraphAgent which lacks it.
 # Patch the parent class to add the missing method.
 # ---------------------------------------------------------------------------
 import ag_ui_langgraph.agent as _agui_mod
+from copilotkit import CopilotKitRemoteEndpoint, LangGraphAGUIAgent
+from copilotkit.integrations.fastapi import add_fastapi_endpoint
 
 if not hasattr(_agui_mod.LangGraphAgent, "dict_repr"):
     _agui_mod.LangGraphAgent.dict_repr = lambda self: {
@@ -133,9 +132,7 @@ async def inject_model_from_headers(request: Request, call_next):
         # Parse selected tools from header (comma-separated tool names)
         selected_tools_header = request.headers.get("x-selected-tools", "")
         selected_tools = (
-            [t.strip() for t in selected_tools_header.split(",") if t.strip()]
-            if selected_tools_header
-            else None
+            [t.strip() for t in selected_tools_header.split(",") if t.strip()] if selected_tools_header else None
         )
 
         try:

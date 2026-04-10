@@ -13,12 +13,10 @@ where needed and test the backend's handling of frontend-shaped requests.
 
 from __future__ import annotations
 
-import json
 from unittest.mock import AsyncMock, patch
 
 import pytest
 from httpx import AsyncClient
-
 
 # ── Simulate: Frontend loads ConfigPanel → user picks model → enters chat ──
 
@@ -49,12 +47,8 @@ class TestFrontendBootSequence:
         agents = data["agents"]
 
         # Must be a dict (not array) — array causes "Known agents: [0]" bug
-        assert isinstance(agents, dict), (
-            f"Frontend expects agents as dict keyed by name, got {type(agents).__name__}"
-        )
-        assert "api_agent" in agents, (
-            f"Frontend expects 'api_agent' key, got: {list(agents.keys())}"
-        )
+        assert isinstance(agents, dict), f"Frontend expects agents as dict keyed by name, got {type(agents).__name__}"
+        assert "api_agent" in agents, f"Frontend expects 'api_agent' key, got: {list(agents.keys())}"
         assert agents["api_agent"]["description"] != ""
 
     @pytest.mark.asyncio
@@ -177,9 +171,7 @@ class TestFrontendConfigManager:
             assert config["source"] in ("builtin", "user")
 
     @pytest.mark.asyncio
-    async def test_config_builder_creates_api(
-        self, api_client: AsyncClient, sample_user_config_data: dict
-    ):
+    async def test_config_builder_creates_api(self, api_client: AsyncClient, sample_user_config_data: dict):
         """
         Simulate the ApiConfigBuilder form submission.
         The frontend sends the exact shape produced by the form.
@@ -194,9 +186,7 @@ class TestFrontendConfigManager:
         assert data["name"] == sample_user_config_data["name"]
 
     @pytest.mark.asyncio
-    async def test_config_builder_edit_flow(
-        self, api_client: AsyncClient, sample_user_config_data: dict
-    ):
+    async def test_config_builder_edit_flow(self, api_client: AsyncClient, sample_user_config_data: dict):
         """
         Simulate: user creates a config, then clicks Edit and changes description.
         The ApiConfigBuilder pre-fills the form and sends PUT on save.
@@ -217,9 +207,7 @@ class TestFrontendConfigManager:
         assert put_resp.json()["timeout"] == 45
 
     @pytest.mark.asyncio
-    async def test_config_manager_delete_with_confirm(
-        self, api_client: AsyncClient, sample_user_config_data: dict
-    ):
+    async def test_config_manager_delete_with_confirm(self, api_client: AsyncClient, sample_user_config_data: dict):
         """
         Simulate: user clicks Delete, confirms, and the config is removed.
         Frontend calls DELETE /api/configs/{id}.
@@ -305,9 +293,7 @@ class TestFullUserSession:
     """
 
     @pytest.mark.asyncio
-    async def test_complete_session_flow(
-        self, api_client: AsyncClient, sample_user_config_data: dict
-    ):
+    async def test_complete_session_flow(self, api_client: AsyncClient, sample_user_config_data: dict):
         # Step 3: Agent discovery — agents must be dict keyed by name
         info_resp = await api_client.post("/copilotkit/info", json={})
         assert info_resp.status_code == 200
@@ -479,9 +465,7 @@ class TestFrontendValidation:
                 "description": "test",
                 "base_url": "https://example.com",
                 "path": "/test",
-                "parameters": [
-                    {"name": "param1", "type": "string", "location": location}
-                ],
+                "parameters": [{"name": "param1", "type": "string", "location": location}],
             }
             resp = await api_client.post("/api/configs", json=payload)
             assert resp.status_code == 201, f"Location {location} should be accepted"

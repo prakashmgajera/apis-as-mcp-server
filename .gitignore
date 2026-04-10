@@ -35,6 +35,10 @@ build/
 .DS_Store
 Thumbs.db
 
+# Claude Code (personal overrides — do not commit)
+CLAUDE.local.md
+.claude/settings.local.json
+
 # Misc
 *.log
 .cache/

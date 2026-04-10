@@ -2,12 +2,8 @@
 
 from __future__ import annotations
 
-import json
-from pathlib import Path
-
 import pytest
 from httpx import AsyncClient
-
 
 # ── Health endpoint ───────────────────────────────────────────────────────
 
@@ -59,13 +55,9 @@ class TestCopilotKitDiscovery:
 
         agents = data["agents"]
         # Must be a dict, not a list
-        assert isinstance(agents, dict), (
-            f"agents must be a dict keyed by name, got {type(agents).__name__}: {agents}"
-        )
+        assert isinstance(agents, dict), f"agents must be a dict keyed by name, got {type(agents).__name__}: {agents}"
         # Key must be the agent name
-        assert "api_agent" in agents, (
-            f"Expected key 'api_agent' in agents dict, got keys: {list(agents.keys())}"
-        )
+        assert "api_agent" in agents, f"Expected key 'api_agent' in agents dict, got keys: {list(agents.keys())}"
         # Numeric keys like "0" indicate the bug where an array was returned
         for key in agents:
             assert not key.isdigit(), (
@@ -160,16 +152,12 @@ class TestConfigsList:
 
 class TestConfigCreate:
     @pytest.mark.asyncio
-    async def test_create_config_returns_201(
-        self, api_client: AsyncClient, sample_user_config_data: dict
-    ):
+    async def test_create_config_returns_201(self, api_client: AsyncClient, sample_user_config_data: dict):
         resp = await api_client.post("/api/configs", json=sample_user_config_data)
         assert resp.status_code == 201
 
     @pytest.mark.asyncio
-    async def test_create_config_assigns_id(
-        self, api_client: AsyncClient, sample_user_config_data: dict
-    ):
+    async def test_create_config_assigns_id(self, api_client: AsyncClient, sample_user_config_data: dict):
         resp = await api_client.post("/api/configs", json=sample_user_config_data)
         data = resp.json()
 
@@ -177,17 +165,13 @@ class TestConfigCreate:
         assert len(data["id"]) > 0  # UUID string
 
     @pytest.mark.asyncio
-    async def test_create_config_sets_source_user(
-        self, api_client: AsyncClient, sample_user_config_data: dict
-    ):
+    async def test_create_config_sets_source_user(self, api_client: AsyncClient, sample_user_config_data: dict):
         resp = await api_client.post("/api/configs", json=sample_user_config_data)
         data = resp.json()
         assert data["source"] == "user"
 
     @pytest.mark.asyncio
-    async def test_create_config_sets_timestamps(
-        self, api_client: AsyncClient, sample_user_config_data: dict
-    ):
+    async def test_create_config_sets_timestamps(self, api_client: AsyncClient, sample_user_config_data: dict):
         resp = await api_client.post("/api/configs", json=sample_user_config_data)
         data = resp.json()
 
@@ -196,9 +180,7 @@ class TestConfigCreate:
         assert data["created_at"] == data["updated_at"]
 
     @pytest.mark.asyncio
-    async def test_create_config_preserves_fields(
-        self, api_client: AsyncClient, sample_user_config_data: dict
-    ):
+    async def test_create_config_preserves_fields(self, api_client: AsyncClient, sample_user_config_data: dict):
         resp = await api_client.post("/api/configs", json=sample_user_config_data)
         data = resp.json()
 
@@ -211,9 +193,7 @@ class TestConfigCreate:
         assert len(data["parameters"]) == 2
 
     @pytest.mark.asyncio
-    async def test_create_config_appears_in_list(
-        self, api_client: AsyncClient, sample_user_config_data: dict
-    ):
+    async def test_create_config_appears_in_list(self, api_client: AsyncClient, sample_user_config_data: dict):
         """After creation, the config appears in GET /api/configs."""
         await api_client.post("/api/configs", json=sample_user_config_data)
 
@@ -268,9 +248,7 @@ class TestConfigGetById:
         assert data["source"] == "builtin"
 
     @pytest.mark.asyncio
-    async def test_get_user_config(
-        self, api_client: AsyncClient, sample_user_config_data: dict
-    ):
+    async def test_get_user_config(self, api_client: AsyncClient, sample_user_config_data: dict):
         """Can retrieve a user config by its ID."""
         create_resp = await api_client.post("/api/configs", json=sample_user_config_data)
         config_id = create_resp.json()["id"]
@@ -287,9 +265,7 @@ class TestConfigGetById:
 
 class TestConfigUpdate:
     @pytest.mark.asyncio
-    async def test_update_user_config(
-        self, api_client: AsyncClient, sample_user_config_data: dict
-    ):
+    async def test_update_user_config(self, api_client: AsyncClient, sample_user_config_data: dict):
         """PUT updates the config and returns the updated version."""
         create_resp = await api_client.post("/api/configs", json=sample_user_config_data)
         config_id = create_resp.json()["id"]
@@ -303,9 +279,7 @@ class TestConfigUpdate:
         assert data["id"] == config_id
 
     @pytest.mark.asyncio
-    async def test_update_preserves_created_at(
-        self, api_client: AsyncClient, sample_user_config_data: dict
-    ):
+    async def test_update_preserves_created_at(self, api_client: AsyncClient, sample_user_config_data: dict):
         """Update preserves the original created_at timestamp."""
         create_resp = await api_client.post("/api/configs", json=sample_user_config_data)
         original = create_resp.json()
@@ -318,18 +292,14 @@ class TestConfigUpdate:
         assert data["created_at"] == original["created_at"]
 
     @pytest.mark.asyncio
-    async def test_update_nonexistent_returns_404(
-        self, api_client: AsyncClient, sample_user_config_data: dict
-    ):
+    async def test_update_nonexistent_returns_404(self, api_client: AsyncClient, sample_user_config_data: dict):
         resp = await api_client.put("/api/configs/no_such_id", json=sample_user_config_data)
         assert resp.status_code == 404
 
 
 class TestConfigDelete:
     @pytest.mark.asyncio
-    async def test_delete_user_config(
-        self, api_client: AsyncClient, sample_user_config_data: dict
-    ):
+    async def test_delete_user_config(self, api_client: AsyncClient, sample_user_config_data: dict):
         create_resp = await api_client.post("/api/configs", json=sample_user_config_data)
         config_id = create_resp.json()["id"]
 
@@ -338,9 +308,7 @@ class TestConfigDelete:
         assert resp.json()["status"] == "deleted"
 
     @pytest.mark.asyncio
-    async def test_delete_removes_from_list(
-        self, api_client: AsyncClient, sample_user_config_data: dict
-    ):
+    async def test_delete_removes_from_list(self, api_client: AsyncClient, sample_user_config_data: dict):
         """After deletion, the config no longer appears in listing."""
         create_resp = await api_client.post("/api/configs", json=sample_user_config_data)
         config_id = create_resp.json()["id"]
@@ -362,9 +330,7 @@ class TestConfigDelete:
         assert resp.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_get_after_delete_returns_404(
-        self, api_client: AsyncClient, sample_user_config_data: dict
-    ):
+    async def test_get_after_delete_returns_404(self, api_client: AsyncClient, sample_user_config_data: dict):
         """GET by ID returns 404 after the config has been deleted."""
         create_resp = await api_client.post("/api/configs", json=sample_user_config_data)
         config_id = create_resp.json()["id"]
@@ -380,9 +346,7 @@ class TestConfigDelete:
 
 class TestConfigLifecycle:
     @pytest.mark.asyncio
-    async def test_full_crud_lifecycle(
-        self, api_client: AsyncClient, sample_user_config_data: dict
-    ):
+    async def test_full_crud_lifecycle(self, api_client: AsyncClient, sample_user_config_data: dict):
         """Test the complete Create → Read → Update → List → Delete → Verify cycle."""
         # 1. Create
         create_resp = await api_client.post("/api/configs", json=sample_user_config_data)
@@ -419,9 +383,7 @@ class TestConfigLifecycle:
         assert list_resp2.json()["user_count"] == 0
 
     @pytest.mark.asyncio
-    async def test_multiple_user_configs(
-        self, api_client: AsyncClient, sample_user_config_data: dict
-    ):
+    async def test_multiple_user_configs(self, api_client: AsyncClient, sample_user_config_data: dict):
         """Can create multiple user configs; all appear in listing."""
         config1 = {**sample_user_config_data, "name": "api_one"}
         config2 = {**sample_user_config_data, "name": "api_two"}
