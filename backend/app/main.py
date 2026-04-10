@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 
-from copilotkit import CopilotKitRemoteEndpoint, LangGraphAgent
+from copilotkit import CopilotKitRemoteEndpoint, LangGraphAGUIAgent
 from copilotkit.integrations.fastapi import add_fastapi_endpoint
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -47,10 +47,10 @@ def _create_placeholder_agent():
 # The real agent (with the user's API key) is injected per-request via middleware.
 copilotkit_sdk = CopilotKitRemoteEndpoint(
     agents=[
-        LangGraphAgent(
+        LangGraphAGUIAgent(
             name="api_agent",
             description="An agent that can interact with configured REST APIs to help users accomplish tasks.",
-            agent=_create_placeholder_agent(),
+            graph=_create_placeholder_agent(),
         ),
     ],
 )
@@ -88,14 +88,27 @@ async def inject_model_from_headers(request: Request, call_next):
         provider = provider or settings.model_provider.value
         model_name = model_name or settings.model_name
 
+        # Parse selected tools from header (comma-separated tool names)
+        selected_tools_header = request.headers.get("x-selected-tools", "")
+        selected_tools = (
+            [t.strip() for t in selected_tools_header.split(",") if t.strip()]
+            if selected_tools_header
+            else None
+        )
+
         try:
-            logger.debug(f"Creating agent: provider={provider}, model={model_name}")
-            agent = create_agent(provider=provider, model_name=model_name, api_key=api_key)
+            logger.debug(f"Creating agent: provider={provider}, model={model_name}, selected_tools={selected_tools}")
+            agent = create_agent(
+                provider=provider,
+                model_name=model_name,
+                api_key=api_key,
+                selected_tools=selected_tools,
+            )
             copilotkit_sdk.agents = [
-                LangGraphAgent(
+                LangGraphAGUIAgent(
                     name="api_agent",
                     description="An agent that can interact with configured REST APIs to help users accomplish tasks.",
-                    agent=agent,
+                    graph=agent,
                 )
             ]
         except Exception as e:
