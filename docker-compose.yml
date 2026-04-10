@@ -1,12 +1,39 @@
 services:
+  mcp-server:
+    build: ./backend
+    command: python -m mcp_server.run
+    ports:
+      - "8001:8001"
+    env_file:
+      - ./backend/.env
+    environment:
+      - MCP_PORT=8001
+      - API_CONFIG_DIR=/app/api_configs
+      - USER_CONFIG_DIR=/app/user_api_configs
+    volumes:
+      - ./backend/api_configs:/app/api_configs
+      - user-api-configs:/app/user_api_configs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
   backend:
     build: ./backend
     ports:
       - "8000:8000"
     env_file:
       - ./backend/.env
+    environment:
+      - MCP_SERVER_URL=http://mcp-server:8001/sse
+      - USER_CONFIG_DIR=/app/user_api_configs
     volumes:
       - ./backend/api_configs:/app/api_configs
+      - user-api-configs:/app/user_api_configs
+    depends_on:
+      mcp-server:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 10s
@@ -18,7 +45,10 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - NEXT_PUBLIC_COPILOTKIT_RUNTIME_URL=http://backend:8000/copilotkit
+      - COPILOTKIT_BACKEND_URL=http://backend:8000
     depends_on:
       backend:
         condition: service_healthy
+
+volumes:
+  user-api-configs:
