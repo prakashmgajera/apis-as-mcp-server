@@ -80,7 +80,7 @@ def create_agent(
         tools = await mcp_client.get_tools()
 
         # Filter to selected tools if specified
-        if selected_tools:
+        if selected_tools is not None:
             tools = [t for t in tools if t.name in selected_tools]
             logger.info(f"Filtered to {len(tools)} tools: {[t.name for t in tools]}")
         else:

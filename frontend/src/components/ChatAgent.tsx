@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { CopilotKit } from "@copilotkit/react-core";
 import { CopilotChat } from "@copilotkit/react-ui";
+import { fetchTools } from "@/lib/api";
 import type { ModelConfig } from "./ConfigPanel";
 import ToolSelector from "./ToolSelector";
 
@@ -16,6 +17,19 @@ export default function ChatAgent({ config, onReset, onManageApis }: Props) {
   const runtimeUrl = "/api/copilotkit";
   const [selectedTools, setSelectedTools] = useState<Set<string>>(new Set());
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Auto-load and select all tools on mount so the user can chat immediately
+  useEffect(() => {
+    fetchTools()
+      .then((data) => {
+        if (data.tools.length > 0) {
+          setSelectedTools(new Set(data.tools.map((t) => t.name)));
+        }
+      })
+      .catch(() => {
+        // ToolSelector will show an error when sidebar is opened
+      });
+  }, []);
 
   const headers = useMemo(
     () => ({

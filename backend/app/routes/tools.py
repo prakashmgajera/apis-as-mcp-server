@@ -21,17 +21,7 @@ async def list_tools():
     Returns a lightweight summary for each tool suitable for the
     frontend tool selector UI.
     """
-    try:
-        async with httpx.AsyncClient(timeout=10) as client:
-            # Use the MCP server's health endpoint which includes tool names
-            resp = await client.get(settings.mcp_server_url.replace("/sse", "/health"))
-            resp.raise_for_status()
-            health_data = resp.json()
-    except Exception as e:
-        logger.exception("Failed to fetch tools from MCP server")
-        return {"error": str(e), "tools": []}
-
-    # Get detailed tool info by connecting via MCP client
+    # Try the MCP client first — this is the primary source of tool info
     try:
         from langchain_mcp_adapters.client import MultiServerMCPClient
 
@@ -46,20 +36,26 @@ async def list_tools():
         )
         mcp_tools = await mcp_client.get_tools()
 
-        tools = []
-        for tool in mcp_tools:
-            tools.append(
-                {
-                    "name": tool.name,
-                    "description": tool.description,
-                }
-            )
-
+        tools = [
+            {"name": tool.name, "description": tool.description}
+            for tool in mcp_tools
+        ]
         return {"tools": tools, "count": len(tools)}
 
     except Exception:
-        logger.exception("Failed to fetch tool details from MCP server")
-        # Fall back to just tool names from health endpoint
+        logger.exception("Failed to fetch tools via MCP client")
+
+    # Fall back to the health endpoint for tool names (no descriptions)
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            resp = await client.get(settings.mcp_server_url.replace("/sse", "/health"))
+            resp.raise_for_status()
+            health_data = resp.json()
+
         tool_names = health_data.get("tool_names", [])
         tools = [{"name": name, "description": ""} for name in tool_names]
         return {"tools": tools, "count": len(tools)}
+
+    except Exception as e:
+        logger.exception("Failed to fetch tools from MCP health endpoint")
+        return {"error": str(e), "tools": [], "count": 0}
