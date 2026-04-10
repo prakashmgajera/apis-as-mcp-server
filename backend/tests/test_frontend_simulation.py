@@ -31,7 +31,11 @@ class TestFrontendBootSequence:
         """
         When ChatAgent mounts, CopilotKit calls POST /copilotkit/info
         with NO auth headers (no API key yet). The backend must return
-        the agent list so the frontend can resolve 'api_agent'.
+        the agent dict so the frontend can resolve 'api_agent'.
+
+        The frontend does:
+            Object.entries(runtimeInfo.agents).map(([id, {description}]) => ...)
+        So agents must be a dict keyed by agent name, NOT an array.
         """
         resp = await api_client.post(
             "/copilotkit/info",
@@ -43,22 +47,26 @@ class TestFrontendBootSequence:
         data = resp.json()
         assert "agents" in data
         agents = data["agents"]
-        assert len(agents) >= 1
 
-        api_agent = next((a for a in agents if a["name"] == "api_agent"), None)
-        assert api_agent is not None, "Frontend expects to find 'api_agent'"
-        assert api_agent["description"] != ""
+        # Must be a dict (not array) — array causes "Known agents: [0]" bug
+        assert isinstance(agents, dict), (
+            f"Frontend expects agents as dict keyed by name, got {type(agents).__name__}"
+        )
+        assert "api_agent" in agents, (
+            f"Frontend expects 'api_agent' key, got: {list(agents.keys())}"
+        )
+        assert agents["api_agent"]["description"] != ""
 
     @pytest.mark.asyncio
     async def test_step1_copilotkit_info_response_structure(self, api_client: AsyncClient):
-        """CopilotKit /info response must have agents, actions, and sdkVersion."""
+        """CopilotKit /info response must have agents (dict), actions (list), and sdkVersion."""
         resp = await api_client.post("/copilotkit/info", json={})
         data = resp.json()
 
         assert "agents" in data
         assert "actions" in data
         assert "sdkVersion" in data
-        assert isinstance(data["agents"], list)
+        assert isinstance(data["agents"], dict)
         assert isinstance(data["actions"], list)
 
 
@@ -300,12 +308,12 @@ class TestFullUserSession:
     async def test_complete_session_flow(
         self, api_client: AsyncClient, sample_user_config_data: dict
     ):
-        # Step 3: Agent discovery
+        # Step 3: Agent discovery — agents must be dict keyed by name
         info_resp = await api_client.post("/copilotkit/info", json={})
         assert info_resp.status_code == 200
-        assert any(
-            a["name"] == "api_agent" for a in info_resp.json()["agents"]
-        ), "api_agent must be discoverable"
+        agents = info_resp.json()["agents"]
+        assert isinstance(agents, dict), "agents must be dict keyed by name"
+        assert "api_agent" in agents, "api_agent must be discoverable"
 
         # Step 5: View configs
         configs_resp = await api_client.get("/api/configs")

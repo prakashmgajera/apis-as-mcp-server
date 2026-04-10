@@ -7,9 +7,11 @@ import logging
 from copilotkit import CopilotKitRemoteEndpoint, LangGraphAGUIAgent
 from copilotkit.integrations.fastapi import add_fastapi_endpoint
 
-# Workaround: CopilotKit 0.1.86 LangGraphAGUIAgent.dict_repr() calls
+# ---------------------------------------------------------------------------
+# Workaround 1: CopilotKit 0.1.86 LangGraphAGUIAgent.dict_repr() calls
 # super().dict_repr() on ag_ui_langgraph.LangGraphAgent which lacks it.
 # Patch the parent class to add the missing method.
+# ---------------------------------------------------------------------------
 import ag_ui_langgraph.agent as _agui_mod
 
 if not hasattr(_agui_mod.LangGraphAgent, "dict_repr"):
@@ -17,6 +19,29 @@ if not hasattr(_agui_mod.LangGraphAgent, "dict_repr"):
         "name": self.name,
         "description": self.description or "",
     }
+
+# ---------------------------------------------------------------------------
+# Workaround 2: CopilotKit frontend v1.x expects /info to return agents as
+# a dict keyed by agent name, e.g. {"api_agent": {"description": "..."}},
+# but the backend SDK v0.1.86 returns agents as an array of dicts.
+# Object.entries(array) yields ["0", ...] keys, so the frontend registers
+# agents under numeric keys and cannot find them by name.
+# ---------------------------------------------------------------------------
+_original_cpk_info = CopilotKitRemoteEndpoint.info
+
+
+def _patched_cpk_info(self, *, context):
+    result = _original_cpk_info(self, context=context)
+    if isinstance(result.get("agents"), list):
+        result["agents"] = {
+            agent["name"]: {k: v for k, v in agent.items() if k != "name"}
+            for agent in result["agents"]
+            if isinstance(agent, dict) and "name" in agent
+        }
+    return result
+
+
+CopilotKitRemoteEndpoint.info = _patched_cpk_info
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse

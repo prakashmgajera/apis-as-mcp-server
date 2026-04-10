@@ -45,22 +45,61 @@ class TestCopilotKitDiscovery:
 
         data = resp.json()
         assert "agents" in data
-        agent_names = [a["name"] for a in data["agents"]]
-        assert "api_agent" in agent_names
+        assert "api_agent" in data["agents"]
 
     @pytest.mark.asyncio
-    async def test_copilotkit_info_agent_has_type(self, api_client: AsyncClient):
-        """Agent info includes the type field for CopilotKit routing."""
+    async def test_copilotkit_info_agents_is_dict_keyed_by_name(self, api_client: AsyncClient):
+        """Frontend v1.x expects agents as a dict keyed by agent name, NOT an array.
+
+        Object.entries(array) yields ["0", ...] keys, causing "Known agents: [0]"
+        instead of finding "api_agent". This test catches the exact failure mode.
+        """
         resp = await api_client.post("/copilotkit/info", json={})
         data = resp.json()
-        agent = next(a for a in data["agents"] if a["name"] == "api_agent")
-        assert "type" in agent
+
+        agents = data["agents"]
+        # Must be a dict, not a list
+        assert isinstance(agents, dict), (
+            f"agents must be a dict keyed by name, got {type(agents).__name__}: {agents}"
+        )
+        # Key must be the agent name
+        assert "api_agent" in agents, (
+            f"Expected key 'api_agent' in agents dict, got keys: {list(agents.keys())}"
+        )
+        # Numeric keys like "0" indicate the bug where an array was returned
+        for key in agents:
+            assert not key.isdigit(), (
+                f"Agent key '{key}' is numeric — agents dict was likely an array. "
+                "Frontend Object.entries(array) produces numeric keys."
+            )
+
+    @pytest.mark.asyncio
+    async def test_copilotkit_info_agent_has_description(self, api_client: AsyncClient):
+        """Frontend destructures {description} from agent value — it must be present."""
+        resp = await api_client.post("/copilotkit/info", json={})
+        data = resp.json()
+        agent = data["agents"]["api_agent"]
+        assert "description" in agent
+        assert len(agent["description"]) > 0
 
     @pytest.mark.asyncio
     async def test_copilotkit_info_has_sdk_version(self, api_client: AsyncClient):
         resp = await api_client.post("/copilotkit/info", json={})
         data = resp.json()
         assert "sdkVersion" in data
+
+    @pytest.mark.asyncio
+    async def test_copilotkit_info_via_root_post(self, api_client: AsyncClient):
+        """Frontend auto-detect sends POST to root with {method: "info"} body."""
+        resp = await api_client.post(
+            "/copilotkit/",
+            json={"method": "info"},
+            headers={"Content-Type": "application/json"},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert isinstance(data["agents"], dict)
+        assert "api_agent" in data["agents"]
 
 
 # ── Configs CRUD ─────────────────────────────────────────────────────────
