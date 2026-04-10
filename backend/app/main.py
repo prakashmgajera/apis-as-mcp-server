@@ -6,6 +6,17 @@ import logging
 
 from copilotkit import CopilotKitRemoteEndpoint, LangGraphAGUIAgent
 from copilotkit.integrations.fastapi import add_fastapi_endpoint
+
+# Workaround: CopilotKit 0.1.86 LangGraphAGUIAgent.dict_repr() calls
+# super().dict_repr() on ag_ui_langgraph.LangGraphAgent which lacks it.
+# Patch the parent class to add the missing method.
+import ag_ui_langgraph.agent as _agui_mod
+
+if not hasattr(_agui_mod.LangGraphAgent, "dict_repr"):
+    _agui_mod.LangGraphAgent.dict_repr = lambda self: {
+        "name": self.name,
+        "description": self.description or "",
+    }
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
