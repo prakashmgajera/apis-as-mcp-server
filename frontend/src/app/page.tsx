@@ -1,8 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import ConfigPanel, { type ModelConfig } from "@/components/ConfigPanel";
 import ChatAgent from "@/components/ChatAgent";
+
+const ApiConfigManager = dynamic(
+  () => import("@/components/ApiConfigManager"),
+  { loading: () => <p className="p-8 text-gray-500">Loading...</p> }
+);
 
 type View = "config" | "chat" | "manage";
 
@@ -22,9 +28,6 @@ export default function Home() {
   }
 
   if (view === "manage") {
-    // Lazy-load the ApiConfigManager (will be created in Step 6)
-    const ApiConfigManager =
-      require("@/components/ApiConfigManager").default;
     return (
       <ApiConfigManager onBack={() => setView("chat")} config={config} />
     );

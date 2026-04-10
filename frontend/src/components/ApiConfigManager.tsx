@@ -1,9 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import { fetchConfigs, deleteConfig } from "@/lib/api";
 import type { ApiEndpointConfig } from "@/types/api-config";
 import type { ModelConfig } from "./ConfigPanel";
+
+const ApiConfigBuilder = dynamic(
+  () => import("@/components/ApiConfigBuilder"),
+  { loading: () => <p className="p-8 text-gray-500">Loading form...</p> }
+);
 
 const METHOD_COLORS: Record<string, string> = {
   GET: "bg-green-100 text-green-700",
@@ -55,8 +61,6 @@ export default function ApiConfigManager({ onBack, config }: Props) {
   };
 
   if (showBuilder || editingConfig) {
-    const ApiConfigBuilder =
-      require("@/components/ApiConfigBuilder").default;
     return (
       <ApiConfigBuilder
         existingConfig={editingConfig}
