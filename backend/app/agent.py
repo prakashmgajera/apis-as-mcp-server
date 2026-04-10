@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import AnyMessage
@@ -83,9 +82,7 @@ def create_agent(
         # Filter to selected tools if specified
         if selected_tools:
             tools = [t for t in tools if t.name in selected_tools]
-            logger.info(
-                f"Filtered to {len(tools)} tools: {[t.name for t in tools]}"
-            )
+            logger.info(f"Filtered to {len(tools)} tools: {[t.name for t in tools]}")
         else:
             logger.info(f"Using all {len(tools)} MCP tools")
 

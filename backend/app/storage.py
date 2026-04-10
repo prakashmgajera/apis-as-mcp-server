@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -49,7 +49,7 @@ class ConfigStorage:
         config_id = str(uuid.uuid4())
         config_data["id"] = config_id
         config_data["source"] = "user"
-        config_data["created_at"] = datetime.now(timezone.utc).isoformat()
+        config_data["created_at"] = datetime.now(UTC).isoformat()
         config_data["updated_at"] = config_data["created_at"]
 
         # Validate that the core fields produce a valid ApiEndpointConfig
@@ -73,8 +73,8 @@ class ConfigStorage:
 
         config_data["id"] = config_id
         config_data["source"] = "user"
-        config_data["created_at"] = existing.get("created_at", datetime.now(timezone.utc).isoformat())
-        config_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+        config_data["created_at"] = existing.get("created_at", datetime.now(UTC).isoformat())
+        config_data["updated_at"] = datetime.now(UTC).isoformat()
 
         self._validate_endpoint(config_data)
 
@@ -97,9 +97,5 @@ class ConfigStorage:
     def _validate_endpoint(data: dict[str, Any]) -> None:
         """Validate that the data can produce a valid ApiEndpointConfig."""
         # Extract only the fields that ApiEndpointConfig expects
-        endpoint_fields = {
-            k: v
-            for k, v in data.items()
-            if k in ApiEndpointConfig.model_fields
-        }
+        endpoint_fields = {k: v for k, v in data.items() if k in ApiEndpointConfig.model_fields}
         ApiEndpointConfig(**endpoint_fields)

@@ -3,16 +3,14 @@
 from __future__ import annotations
 
 import json
-import asyncio
 from pathlib import Path
 
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 
-from mcp_server.tool_registry import ToolRegistry
 from mcp_server.server import create_mcp_server
-
+from mcp_server.tool_registry import ToolRegistry
 
 # ── ToolRegistry tests ────────────────────────────────────────────────────
 
@@ -199,9 +197,7 @@ class TestMCPServerHTTP:
     """Integration tests for the MCP server's health and reload HTTP endpoints."""
 
     @pytest_asyncio.fixture()
-    async def mcp_client(
-        self, sample_yaml_config: str, tmp_config_dirs: dict[str, str]
-    ) -> AsyncClient:
+    async def mcp_client(self, sample_yaml_config: str, tmp_config_dirs: dict[str, str]) -> AsyncClient:
         """Create an async test client for the MCP server Starlette app."""
         from starlette.applications import Starlette
         from starlette.requests import Request
@@ -214,20 +210,24 @@ class TestMCPServerHTTP:
         )
 
         async def handle_health(request: Request):
-            return JSONResponse({
-                "status": "healthy",
-                "tools": len(registry.get_tool_names()),
-                "tool_names": registry.get_tool_names(),
-            })
+            return JSONResponse(
+                {
+                    "status": "healthy",
+                    "tools": len(registry.get_tool_names()),
+                    "tool_names": registry.get_tool_names(),
+                }
+            )
 
         async def handle_reload(request: Request):
             registry.reload()
             return JSONResponse({"status": "reloaded", "tools": len(registry.get_tool_names())})
 
-        test_app = Starlette(routes=[
-            Route("/health", handle_health, methods=["GET"]),
-            Route("/reload", handle_reload, methods=["POST"]),
-        ])
+        test_app = Starlette(
+            routes=[
+                Route("/health", handle_health, methods=["GET"]),
+                Route("/reload", handle_reload, methods=["POST"]),
+            ]
+        )
 
         transport = ASGITransport(app=test_app)
         async with AsyncClient(transport=transport, base_url="http://mcp-test") as client:

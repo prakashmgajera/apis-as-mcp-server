@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import os
-from enum import Enum
+from enum import StrEnum
 
 from pydantic_settings import BaseSettings
 
 
-class ModelProvider(str, Enum):
+class ModelProvider(StrEnum):
     OPENAI = "openai"
     ANTHROPIC = "anthropic"
     GOOGLE = "google"

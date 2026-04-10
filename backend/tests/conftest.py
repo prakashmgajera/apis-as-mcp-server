@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-import json
 import os
 import shutil
 import tempfile
+from collections.abc import AsyncGenerator, Generator
 from pathlib import Path
-from typing import AsyncGenerator, Generator
 
 import pytest
 import pytest_asyncio
@@ -152,11 +151,9 @@ def patched_settings(tmp_config_dirs: dict[str, str], sample_yaml_config: str):
 async def api_client(patched_settings) -> AsyncGenerator[AsyncClient, None]:
     """Async HTTP test client hitting the FastAPI app directly (no network)."""
     # Re-initialize the storage in the configs router to use the patched dir
-    from app.routes.api_configs import storage
-    from app.storage import ConfigStorage
-
     # Replace the module-level storage with one pointing at the temp dir
     import app.routes.api_configs as configs_mod
+    from app.storage import ConfigStorage
 
     original_storage = configs_mod.storage
     configs_mod.storage = ConfigStorage(patched_settings.user_config_dir)

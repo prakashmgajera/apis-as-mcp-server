@@ -9,7 +9,7 @@ from typing import Any
 
 import yaml
 
-from app.models.api_config import ApiConfigFile, ApiEndpointConfig, ParameterLocation
+from app.models.api_config import ApiConfigFile, ApiEndpointConfig
 from app.tools.api_tool import execute_api_call
 
 logger = logging.getLogger(__name__)
@@ -67,9 +67,7 @@ class ToolRegistry:
                 config_file = ApiConfigFile(**raw)
                 for group in config_file.groups:
                     configs.extend(group.apis)
-                    logger.info(
-                        f"Loaded {len(group.apis)} APIs from group '{group.name}' in {yaml_file.name}"
-                    )
+                    logger.info(f"Loaded {len(group.apis)} APIs from group '{group.name}' in {yaml_file.name}")
             except Exception:
                 logger.exception(f"Failed to load YAML config from {yaml_file}")
 

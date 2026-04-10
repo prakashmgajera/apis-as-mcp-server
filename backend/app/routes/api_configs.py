@@ -67,8 +67,9 @@ async def _reload_mcp_server() -> None:
 
 def _load_builtin_configs() -> list[dict[str, Any]]:
     """Load built-in YAML configs and return them as dicts with metadata."""
-    import yaml
     from pathlib import Path
+
+    import yaml
 
     configs = []
     config_path = Path(settings.api_config_dir)
@@ -93,7 +94,9 @@ def _load_builtin_configs() -> list[dict[str, Any]]:
                     config_dict["method"] = api.method.value
                     config_dict["auth"]["type"] = api.auth.type.value
                     for param in config_dict["parameters"]:
-                        param["location"] = param["location"].value if hasattr(param["location"], "value") else param["location"]
+                        param["location"] = (
+                            param["location"].value if hasattr(param["location"], "value") else param["location"]
+                        )
                     configs.append(config_dict)
         except Exception:
             logger.exception(f"Failed to load built-in config from {yaml_file}")

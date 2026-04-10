@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, Field
 
 
-class HttpMethod(str, Enum):
+class HttpMethod(StrEnum):
     GET = "GET"
     POST = "POST"
     PUT = "PUT"
@@ -16,7 +16,7 @@ class HttpMethod(str, Enum):
     DELETE = "DELETE"
 
 
-class ParameterLocation(str, Enum):
+class ParameterLocation(StrEnum):
     QUERY = "query"
     PATH = "path"
     HEADER = "header"
@@ -34,7 +34,7 @@ class ParameterSchema(BaseModel):
     default: Any = Field(None, description="Default value if not provided")
 
 
-class AuthType(str, Enum):
+class AuthType(StrEnum):
     NONE = "none"
     BEARER = "bearer"
     API_KEY = "api_key"

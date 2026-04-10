@@ -10,7 +10,7 @@ import yaml
 from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, Field, create_model
 
-from ..models.api_config import ApiConfigFile, ApiEndpointConfig, ParameterLocation
+from ..models.api_config import ApiConfigFile, ApiEndpointConfig
 from .api_tool import execute_api_call
 
 logger = logging.getLogger(__name__)
