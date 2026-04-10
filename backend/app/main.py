@@ -4,8 +4,44 @@ from __future__ import annotations
 
 import logging
 
-from copilotkit import CopilotKitRemoteEndpoint, LangGraphAgent
+from copilotkit import CopilotKitRemoteEndpoint, LangGraphAGUIAgent
 from copilotkit.integrations.fastapi import add_fastapi_endpoint
+
+# ---------------------------------------------------------------------------
+# Workaround 1: CopilotKit 0.1.86 LangGraphAGUIAgent.dict_repr() calls
+# super().dict_repr() on ag_ui_langgraph.LangGraphAgent which lacks it.
+# Patch the parent class to add the missing method.
+# ---------------------------------------------------------------------------
+import ag_ui_langgraph.agent as _agui_mod
+
+if not hasattr(_agui_mod.LangGraphAgent, "dict_repr"):
+    _agui_mod.LangGraphAgent.dict_repr = lambda self: {
+        "name": self.name,
+        "description": self.description or "",
+    }
+
+# ---------------------------------------------------------------------------
+# Workaround 2: CopilotKit frontend v1.x expects /info to return agents as
+# a dict keyed by agent name, e.g. {"api_agent": {"description": "..."}},
+# but the backend SDK v0.1.86 returns agents as an array of dicts.
+# Object.entries(array) yields ["0", ...] keys, so the frontend registers
+# agents under numeric keys and cannot find them by name.
+# ---------------------------------------------------------------------------
+_original_cpk_info = CopilotKitRemoteEndpoint.info
+
+
+def _patched_cpk_info(self, *, context):
+    result = _original_cpk_info(self, context=context)
+    if isinstance(result.get("agents"), list):
+        result["agents"] = {
+            agent["name"]: {k: v for k, v in agent.items() if k != "name"}
+            for agent in result["agents"]
+            if isinstance(agent, dict) and "name" in agent
+        }
+    return result
+
+
+CopilotKitRemoteEndpoint.info = _patched_cpk_info
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -13,6 +49,8 @@ from langgraph.graph import MessagesState, StateGraph
 
 from .agent import create_agent
 from .config import settings
+from .routes.api_configs import router as configs_router
+from .routes.tools import router as tools_router
 
 logging.basicConfig(level=logging.DEBUG if settings.debug else logging.INFO)
 logger = logging.getLogger(__name__)
@@ -47,14 +85,18 @@ def _create_placeholder_agent():
 # The real agent (with the user's API key) is injected per-request via middleware.
 copilotkit_sdk = CopilotKitRemoteEndpoint(
     agents=[
-        LangGraphAgent(
+        LangGraphAGUIAgent(
             name="api_agent",
             description="An agent that can interact with configured REST APIs to help users accomplish tasks.",
-            agent=_create_placeholder_agent(),
+            graph=_create_placeholder_agent(),
         ),
     ],
 )
 add_fastapi_endpoint(app, copilotkit_sdk, "/copilotkit")
+
+# Mount API management routes
+app.include_router(configs_router, prefix="/api")
+app.include_router(tools_router, prefix="/api")
 
 
 @app.middleware("http")
@@ -88,14 +130,27 @@ async def inject_model_from_headers(request: Request, call_next):
         provider = provider or settings.model_provider.value
         model_name = model_name or settings.model_name
 
+        # Parse selected tools from header (comma-separated tool names)
+        selected_tools_header = request.headers.get("x-selected-tools", "")
+        selected_tools = (
+            [t.strip() for t in selected_tools_header.split(",") if t.strip()]
+            if selected_tools_header
+            else None
+        )
+
         try:
-            logger.debug(f"Creating agent: provider={provider}, model={model_name}")
-            agent = create_agent(provider=provider, model_name=model_name, api_key=api_key)
+            logger.debug(f"Creating agent: provider={provider}, model={model_name}, selected_tools={selected_tools}")
+            agent = create_agent(
+                provider=provider,
+                model_name=model_name,
+                api_key=api_key,
+                selected_tools=selected_tools,
+            )
             copilotkit_sdk.agents = [
-                LangGraphAgent(
+                LangGraphAGUIAgent(
                     name="api_agent",
                     description="An agent that can interact with configured REST APIs to help users accomplish tasks.",
-                    agent=agent,
+                    graph=agent,
                 )
             ]
         except Exception as e:

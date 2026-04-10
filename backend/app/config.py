@@ -36,6 +36,12 @@ class Settings(BaseSettings):
     # API config directory
     api_config_dir: str = os.path.join(os.path.dirname(os.path.dirname(__file__)), "api_configs")
 
+    # User-defined API config directory
+    user_config_dir: str = os.path.join(os.path.dirname(os.path.dirname(__file__)), "user_api_configs")
+
+    # MCP Server URL (SSE endpoint)
+    mcp_server_url: str = "http://localhost:8001/sse"
+
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
 
 
