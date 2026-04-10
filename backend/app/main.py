@@ -13,6 +13,8 @@ from langgraph.graph import MessagesState, StateGraph
 
 from .agent import create_agent
 from .config import settings
+from .routes.api_configs import router as configs_router
+from .routes.tools import router as tools_router
 
 logging.basicConfig(level=logging.DEBUG if settings.debug else logging.INFO)
 logger = logging.getLogger(__name__)
@@ -55,6 +57,10 @@ copilotkit_sdk = CopilotKitRemoteEndpoint(
     ],
 )
 add_fastapi_endpoint(app, copilotkit_sdk, "/copilotkit")
+
+# Mount API management routes
+app.include_router(configs_router, prefix="/api")
+app.include_router(tools_router, prefix="/api")
 
 
 @app.middleware("http")
